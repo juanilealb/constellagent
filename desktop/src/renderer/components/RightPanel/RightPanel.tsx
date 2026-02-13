@@ -38,12 +38,12 @@ export function RightPanel() {
               Changes
             </button>
           </Tooltip>
-          <Tooltip label="Assistant">
+          <Tooltip label="Chat">
             <button
               className={`${styles.modeButton} ${rightPanelMode === 'assistant' ? styles.active : ''}`}
               onClick={() => setRightPanelMode('assistant')}
             >
-              Assistant
+              Chat
             </button>
           </Tooltip>
         </div>

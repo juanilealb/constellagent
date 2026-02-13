@@ -1,76 +1,61 @@
 /*
- * Constellagent — "Midnight Instrument Panel" Design System
- *
- * Layered surfaces with subtle depth. Tokyo Night palette refined
- * for a precision-tooling aesthetic. Surgical accent usage.
+ * Constellagent design tokens
+ * Chat-first, high-contrast palette inspired by Conductor aesthetics.
  */
 
 :root {
-  /* ═══════════════════════════════════════════════════════
-     SURFACE LAYERS — depth through subtle value shifts
-     Each layer is slightly lighter, creating visual hierarchy
-     ═══════════════════════════════════════════════════════ */
-  --surface-0: #13141b;          /* Deepest — app background, sidebar bg */
-  --surface-1: #16171f;          /* Primary panels — center area */
-  --surface-2: #1a1b26;          /* Elevated — tab bar, right panel header */
-  --surface-3: #1e1f2b;          /* Higher — active tab, hover states */
-  --surface-4: #24253a;          /* Highest — dropdowns, dialogs, tooltips */
+  /* Surfaces */
+  --surface-0: #0b0d10;
+  --surface-1: #101419;
+  --surface-2: #151b21;
+  --surface-3: #1c242d;
+  --surface-4: #24303b;
 
-  /* ═══════════════════════════════════════════════════════
-     BORDERS — barely there, just enough to define edges
-     ═══════════════════════════════════════════════════════ */
-  --border-subtle: #1e1f2e;      /* Panel dividers — almost invisible */
-  --border-default: #282a3a;     /* More visible borders — tab separators */
-  --border-strong: #363852;      /* Focused elements, active outlines */
-  --border-accent: #7aa2f7;      /* Focus rings, accent outlines */
+  /* Borders */
+  --border-subtle: #1c252f;
+  --border-default: #2b3642;
+  --border-strong: #3f4f5f;
+  --border-accent: #4f9bf3;
 
-  /* ═══════════════════════════════════════════════════════
-     TEXT — four levels of emphasis
-     ═══════════════════════════════════════════════════════ */
-  --text-primary: #c0caf5;       /* Primary content — file names, code */
-  --text-secondary: #8e95b4;     /* Secondary — descriptions, metadata */
-  --text-tertiary: #565b7e;      /* Tertiary — disabled, placeholder */
-  --text-ghost: #3b3f5c;         /* Barely visible — decorative text */
-  --text-inverse: #13141b;       /* On accent backgrounds */
+  /* Text */
+  --text-primary: #e8edf2;
+  --text-secondary: #b7c0cb;
+  --text-tertiary: #8995a5;
+  --text-ghost: #5b6575;
+  --text-inverse: #081015;
 
-  /* ═══════════════════════════════════════════════════════
-     ACCENTS — Tokyo Night spectrum, used sparingly
-     ═══════════════════════════════════════════════════════ */
-  --accent-blue: #7aa2f7;        /* Primary accent — active states, focus */
-  --accent-blue-dim: #3d5a9e;    /* Muted blue — selected bg tint */
-  --accent-blue-glow: rgba(122, 162, 247, 0.08); /* Subtle glow/bg */
-  --accent-cyan: #7dcfff;        /* Info, links */
-  --accent-purple: #bb9af7;      /* Keywords, special items */
-  --accent-green: #9ece6a;       /* Success, additions, new items */
-  --accent-green-muted: #73a94c; /* Untracked/new files (dimmer green) */
-  --accent-green-dim: rgba(158, 206, 106, 0.12);
-  --accent-red: #f7768e;         /* Errors, deletions, destructive */
-  --accent-red-dim: rgba(247, 118, 142, 0.12);
-  --accent-orange: #ff9e64;      /* Warnings, modified */
-  --accent-orange-dim: rgba(255, 158, 100, 0.12);
-  --accent-yellow: #e0af68;      /* Caution, highlighted */
+  /* Accents */
+  --accent-blue: #4f9bf3;
+  --accent-blue-dim: #2f5e99;
+  --accent-blue-glow: rgba(79, 155, 243, 0.16);
+  --accent-cyan: #57d4c8;
+  --accent-purple: #b29cff;
+  --accent-green: #6ad58e;
+  --accent-green-muted: #4fa86f;
+  --accent-green-dim: rgba(106, 213, 142, 0.16);
+  --accent-red: #f16a72;
+  --accent-red-dim: rgba(241, 106, 114, 0.16);
+  --accent-orange: #f3b067;
+  --accent-orange-dim: rgba(243, 176, 103, 0.16);
+  --accent-yellow: #e8cd75;
 
-  /* ═══════════════════════════════════════════════════════
-     TERMINAL PALETTE — matches Tokyo Night terminal colors
-     ═══════════════════════════════════════════════════════ */
-  --term-bg: #13141b;
-  --term-fg: #c0caf5;
-  --term-cursor: #c0caf5;
-  --term-selection: rgba(122, 162, 247, 0.2);
-  --term-black: #15161e;
-  --term-red: #f7768e;
-  --term-green: #9ece6a;
-  --term-yellow: #e0af68;
-  --term-blue: #7aa2f7;
-  --term-magenta: #bb9af7;
-  --term-cyan: #7dcfff;
-  --term-white: #a9b1d6;
+  /* Terminal */
+  --term-bg: #0b0f13;
+  --term-fg: #d6deea;
+  --term-cursor: #d6deea;
+  --term-selection: rgba(79, 155, 243, 0.25);
+  --term-black: #121820;
+  --term-red: #f16a72;
+  --term-green: #6ad58e;
+  --term-yellow: #f3b067;
+  --term-blue: #4f9bf3;
+  --term-magenta: #b29cff;
+  --term-cyan: #57d4c8;
+  --term-white: #c7d1de;
 
-  /* ═══════════════════════════════════════════════════════
-     TYPOGRAPHY
-     ═══════════════════════════════════════════════════════ */
+  /* Typography */
   --font-mono: 'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', 'Consolas', monospace;
-  --font-ui: 'Segoe UI', 'Segoe UI Variable', system-ui, sans-serif;
+  --font-ui: 'Segoe UI Variable Text', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
 
   --text-xs: 10px;
   --text-sm: 11px;
@@ -87,9 +72,7 @@
   --weight-medium: 500;
   --weight-semibold: 600;
 
-  /* ═══════════════════════════════════════════════════════
-     SPACING — 4px base grid
-     ═══════════════════════════════════════════════════════ */
+  /* Spacing */
   --space-0: 0px;
   --space-1: 2px;
   --space-2: 4px;
@@ -102,36 +85,29 @@
   --space-12: 24px;
   --space-16: 32px;
 
-  /* ═══════════════════════════════════════════════════════
-     RADII
-     ═══════════════════════════════════════════════════════ */
+  /* Radius */
   --radius-sm: 3px;
   --radius-md: 5px;
   --radius-lg: 8px;
   --radius-xl: 12px;
   --radius-full: 100px;
 
-  /* ═══════════════════════════════════════════════════════
-     SHADOWS — subtle depth indicators
-     ═══════════════════════════════════════════════════════ */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 3px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 
-  /* ═══════════════════════════════════════════════════════
-     TRANSITIONS
-     ═══════════════════════════════════════════════════════ */
+  /* Motion */
   --transition-fast: 80ms ease;
   --transition-default: 150ms ease;
   --transition-slow: 250ms ease;
 
-  /* ═══════════════════════════════════════════════════════
-     LAYOUT
-     ═══════════════════════════════════════════════════════ */
+  /* Layout */
   --sidebar-width: 220px;
   --right-panel-width: 280px;
   --tab-height: 35px;
-  --titlebar-height: 38px;     /* draggable title bar area */
+  --titlebar-height: 38px;
   --status-bar-height: 22px;
 }
+

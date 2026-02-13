@@ -7,7 +7,7 @@ import { spawn } from 'child_process'
 import { watch, type FSWatcher } from 'fs'
 import { IPC } from '../shared/ipc-channels'
 import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
-import type { AgentRunPromptRequest, AgentRunPromptResult } from '../shared/agent-types'
+import type { AgentChatMessage, AgentRunPromptRequest, AgentRunPromptResult } from '../shared/agent-types'
 import { debugLog, toPosixPath } from '@shared/platform'
 import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
@@ -98,33 +98,48 @@ function resolveCodexCommand(): { command: string; baseArgs: string[] } {
     return { command: 'node', baseArgs: [codexScript] }
   }
 
+  if (process.platform === 'win32' && process.env.APPDATA) {
+    const codexCmd = join(process.env.APPDATA, 'npm', 'codex.cmd')
+    if (existsSync(codexCmd)) {
+      return { command: codexCmd, baseArgs: [] }
+    }
+    return { command: 'codex.cmd', baseArgs: [] }
+  }
+
   return { command: 'codex', baseArgs: [] }
 }
 
-async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunPromptResult> {
-  const prompt = payload.prompt.trim()
-  if (!prompt) {
-    return {
-      agent: payload.agent,
-      ok: false,
-      command: '',
-      exitCode: null,
-      stdout: '',
-      stderr: '',
-      error: 'Prompt cannot be empty.',
-    }
+function collectMessages(payload: AgentRunPromptRequest): AgentChatMessage[] {
+  if (payload.messages && payload.messages.length > 0) {
+    return payload.messages
+      .map((m) => ({ role: m.role, content: m.content.trim() }))
+      .filter((m) => m.content.length > 0)
   }
 
-  const rawImagePaths = (payload.imagePaths ?? []).filter((p) => !!p)
-  const warnings: string[] = []
-  const imagePaths = rawImagePaths.filter((p) => {
-    const exists = existsSync(p)
-    if (!exists) {
-      warnings.push(`Image not found and skipped: ${p}`)
-    }
-    return exists
-  })
+  const fallbackPrompt = payload.prompt?.trim() ?? ''
+  return fallbackPrompt ? [{ role: 'user', content: fallbackPrompt }] : []
+}
 
+function formatTranscriptPrompt(messages: AgentChatMessage[]): string {
+  return messages
+    .map((m) => {
+      const role =
+        m.role === 'assistant'
+          ? 'Assistant'
+          : m.role === 'system'
+            ? 'System'
+            : 'User'
+      return `${role}:\n${m.content}`
+    })
+    .join('\n\n')
+}
+
+async function runCliAgent(
+  payload: AgentRunPromptRequest,
+  prompt: string,
+  imagePaths: string[],
+  warnings: string[],
+): Promise<AgentRunPromptResult> {
   let command = ''
   let args: string[] = []
   let executable = ''
@@ -134,6 +149,10 @@ async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunP
     const resolved = resolveCodexCommand()
     executable = resolved.command
     args = [...resolved.baseArgs, 'exec']
+    const model = payload.model?.trim()
+    if (model) {
+      args.push('--model', model)
+    }
     for (const imagePath of imagePaths) {
       args.push('--image', imagePath)
     }
@@ -207,9 +226,14 @@ async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunP
     })
 
     child.on('close', (exitCode) => {
+      const mergedOutput = `${stderr}\n${stdout}`
+      const authError =
+        payload.agent === 'codex' && exitCode !== 0 && /not logged in/i.test(mergedOutput)
+          ? 'Codex is not logged in. Run `codex login --device-auth` in a terminal and try again.'
+          : undefined
       const error = timedOut
         ? `Timed out after ${Math.floor(AGENT_TIMEOUT_MS / 1000)}s.`
-        : (exitCode === 0 ? undefined : (stderr.trim() || `Agent process exited with code ${exitCode}.`))
+        : (authError ?? (exitCode === 0 ? undefined : (stderr.trim() || `Agent process exited with code ${exitCode}.`)))
 
       finish({
         agent: payload.agent,
@@ -223,6 +247,34 @@ async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunP
       })
     })
   })
+}
+
+async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunPromptResult> {
+  const messages = collectMessages(payload)
+  if (messages.length === 0) {
+    return {
+      agent: payload.agent,
+      ok: false,
+      command: '',
+      exitCode: null,
+      stdout: '',
+      stderr: '',
+      error: 'Prompt cannot be empty.',
+    }
+  }
+
+  const rawImagePaths = (payload.imagePaths ?? []).filter((p) => !!p)
+  const warnings: string[] = []
+  const imagePaths = rawImagePaths.filter((p) => {
+    const exists = existsSync(p)
+    if (!exists) {
+      warnings.push(`Image not found and skipped: ${p}`)
+    }
+    return exists
+  })
+
+  const prompt = formatTranscriptPrompt(messages)
+  return runCliAgent(payload, prompt, imagePaths, warnings)
 }
 
 export function registerIpcHandlers(): void {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent } from 'react'
-import type { AgentKind } from '@shared/agent-types'
+import type { AgentChatMessage, AgentKind } from '@shared/agent-types'
 import { useAppStore } from '../../store/app-store'
 import styles from './AgentChatPanel.module.css'
 
@@ -20,21 +20,24 @@ interface Props {
   isActive: boolean
 }
 
+const CHAT_CONTEXT_LIMIT = 10
+
 function compactForContext(text: string): string {
-  const max = 1200
+  const max = 2000
   if (text.length <= max) return text
   return `${text.slice(0, max)}\n...[truncated]`
 }
 
-function buildPromptWithContext(history: ChatMessage[], userPrompt: string): string {
-  const context = history
-    .filter((m) => m.role !== 'system')
-    .slice(-8)
-    .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}:\n${compactForContext(m.text)}`)
-    .join('\n\n')
+function buildAgentMessages(history: ChatMessage[], userPrompt: string): AgentChatMessage[] {
+  const recentConversation = history
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .slice(-CHAT_CONTEXT_LIMIT)
+    .map((m) => ({
+      role: m.role,
+      content: compactForContext(m.text),
+    })) as AgentChatMessage[]
 
-  if (!context) return userPrompt
-  return `Conversation so far:\n${context}\n\nLatest user request:\n${userPrompt}`
+  return [...recentConversation, { role: 'user', content: userPrompt }]
 }
 
 function formatResultText(
@@ -54,7 +57,6 @@ function formatResultText(
 }
 
 export function AgentChatPanel({ workspaceId, worktreePath, isActive }: Props) {
-  const [agentByWorkspace, setAgentByWorkspace] = useState<Record<string, AgentKind>>({})
   const [draftByWorkspace, setDraftByWorkspace] = useState<Record<string, string>>({})
   const [attachmentsByWorkspace, setAttachmentsByWorkspace] = useState<Record<string, string[]>>({})
   const [historyByWorkspace, setHistoryByWorkspace] = useState<Record<string, ChatMessage[]>>({})
@@ -64,7 +66,7 @@ export function AgentChatPanel({ workspaceId, worktreePath, isActive }: Props) {
   const listRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const agent = agentByWorkspace[workspaceId] ?? 'codex'
+  const agent: AgentKind = 'codex'
   const draft = draftByWorkspace[workspaceId] ?? ''
   const attachments = attachmentsByWorkspace[workspaceId] ?? []
   const history = historyByWorkspace[workspaceId] ?? []
@@ -74,10 +76,6 @@ export function AgentChatPanel({ workspaceId, worktreePath, isActive }: Props) {
     if (running) return false
     return draft.trim().length > 0 || attachments.length > 0
   }, [running, draft, attachments.length])
-
-  const setAgent = (value: AgentKind) => {
-    setAgentByWorkspace((prev) => ({ ...prev, [workspaceId]: value }))
-  }
 
   const setDraft = (value: string) => {
     setDraftByWorkspace((prev) => ({ ...prev, [workspaceId]: value }))
@@ -172,10 +170,10 @@ export function AgentChatPanel({ workspaceId, worktreePath, isActive }: Props) {
     setRunningByWorkspace((prev) => ({ ...prev, [workspaceId]: true }))
 
     try {
-      const promptWithContext = buildPromptWithContext(history, userText)
+      const messages = buildAgentMessages(history, userText)
       const result = await window.api.agent.runPrompt({
         agent,
-        prompt: promptWithContext,
+        messages,
         cwd: worktreePath,
         imagePaths: inputImages,
       })
@@ -208,26 +206,21 @@ export function AgentChatPanel({ workspaceId, worktreePath, isActive }: Props) {
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <span className={styles.label}>Agent</span>
-          <select
-            className={styles.agentSelect}
-            value={agent}
-            onChange={(e) => setAgent(e.target.value as AgentKind)}
-            disabled={running}
-          >
-            <option value="codex">Codex</option>
-            <option value="claude">Claude</option>
-          </select>
+          <span className={styles.agentPill}>Codex OAuth</span>
         </div>
-        <button className={styles.secondaryButton} onClick={focusOrCreateTerminal}>
-          Terminal
-        </button>
+        <div className={styles.toolbarActions}>
+          <button className={styles.secondaryButton} onClick={focusOrCreateTerminal}>
+            Terminal
+          </button>
+        </div>
       </div>
 
       <div className={styles.messages} ref={listRef}>
         {history.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>Ask with Codex or Claude in the current workspace.</p>
-            <p>Keep using terminal tabs in parallel for manual commands.</p>
+            <p>Chat connected through local Codex CLI authentication.</p>
+            <p>First time only: run <code>codex login --device-auth</code> in terminal.</p>
+            <p>Then ask directly here with code context and images.</p>
           </div>
         ) : (
           history.map((message) => (

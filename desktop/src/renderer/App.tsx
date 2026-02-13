@@ -11,6 +11,7 @@ import { TerminalPanel } from './components/Terminal/TerminalPanel'
 import { FileEditor } from './components/Editor/FileEditor'
 import { DiffViewer } from './components/Editor/DiffEditor'
 import { RightPanel } from './components/RightPanel/RightPanel'
+import { AssistantWorkspace } from './components/Assistant/AssistantWorkspace'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { AutomationsPanel } from './components/Automations/AutomationsPanel'
 import { QuickOpen } from './components/QuickOpen/QuickOpen'
@@ -63,6 +64,7 @@ export function App() {
     activeWorkspaceTabs,
     workspaces,
     activeWorkspaceId,
+    rightPanelMode,
     settingsOpen,
     automationsOpen,
     quickOpenVisible,
@@ -75,6 +77,7 @@ export function App() {
       activeWorkspaceTabs: s.activeWorkspaceTabs,
       workspaces: s.workspaces,
       activeWorkspaceId: s.activeWorkspaceId,
+      rightPanelMode: s.rightPanelMode,
       settingsOpen: s.settingsOpen,
       automationsOpen: s.automationsOpen,
       quickOpenVisible: s.quickOpenVisible,
@@ -84,6 +87,7 @@ export function App() {
   const wsTabs = activeWorkspaceTabs()
   const activeTab = wsTabs.find((t) => t.id === activeTabId)
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
+  const assistantMode = rightPanelMode === 'assistant' && !!workspace
 
   // Keep terminal instances scoped to the active workspace to reduce renderer load.
   const workspaceTerminals = allTabs.filter(
@@ -109,56 +113,60 @@ export function App() {
 
             {/* Center */}
             <Allotment.Pane>
-              <div className={styles.centerPanel}>
-                <TabBar />
-                <div className={styles.contentArea}>
-                  {workspaceTerminals.map((t) => (
-                    <TerminalPanel
-                      key={t.id}
-                      ptyId={t.ptyId}
-                      active={t.id === activeTabId}
-                    />
-                  ))}
+              {assistantMode && workspace ? (
+                <AssistantWorkspace workspaceId={workspace.id} worktreePath={workspace.worktreePath} />
+              ) : (
+                <div className={styles.centerPanel}>
+                  <TabBar />
+                  <div className={styles.contentArea}>
+                    {workspaceTerminals.map((t) => (
+                      <TerminalPanel
+                        key={t.id}
+                        ptyId={t.ptyId}
+                        active={t.id === activeTabId}
+                      />
+                    ))}
 
-                  {!activeTab ? (
-                    <div className={styles.welcome}>
-                      <div className={styles.welcomeLogo}>constellagent</div>
-                      <div className={styles.welcomeHint}>
-                        Add a project to get started, or press
-                        <span className={styles.welcomeShortcut}>
-                          {formatShortcut(SHORTCUT_MAP.newTerminal.mac, SHORTCUT_MAP.newTerminal.win)}
-                        </span>
-                        for a new terminal
+                    {!activeTab ? (
+                      <div className={styles.welcome}>
+                        <div className={styles.welcomeLogo}>constellagent</div>
+                        <div className={styles.welcomeHint}>
+                          Add a project to get started, or press
+                          <span className={styles.welcomeShortcut}>
+                            {formatShortcut(SHORTCUT_MAP.newTerminal.mac, SHORTCUT_MAP.newTerminal.win)}
+                          </span>
+                          for a new terminal
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Render active file editor */}
-                      {activeTab?.type === 'file' && (
-                        <FileEditor
-                          key={activeTab.id}
-                          tabId={activeTab.id}
-                          filePath={activeTab.filePath}
-                          active={true}
-                        />
-                      )}
+                    ) : (
+                      <>
+                        {/* Render active file editor */}
+                        {activeTab?.type === 'file' && (
+                          <FileEditor
+                            key={activeTab.id}
+                            tabId={activeTab.id}
+                            filePath={activeTab.filePath}
+                            active={true}
+                          />
+                        )}
 
-                      {/* Render active diff viewer */}
-                      {activeTab?.type === 'diff' && workspace && (
-                        <DiffViewer
-                          key={activeTab.id}
-                          worktreePath={workspace.worktreePath}
-                          active={true}
-                        />
-                      )}
-                    </>
-                  )}
+                        {/* Render active diff viewer */}
+                        {activeTab?.type === 'diff' && workspace && (
+                          <DiffViewer
+                            key={activeTab.id}
+                            worktreePath={workspace.worktreePath}
+                            active={true}
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </Allotment.Pane>
 
             {/* Right Panel */}
-            {rightPanelOpen && (
+            {rightPanelOpen && !assistantMode && (
               <Allotment.Pane minSize={200} maxSize={500} preferredSize={280}>
                 <RightPanel />
               </Allotment.Pane>

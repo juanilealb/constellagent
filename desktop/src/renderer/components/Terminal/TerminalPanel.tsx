@@ -86,34 +86,36 @@ export function TerminalPanel({ ptyId, active }: Props) {
         const monoFont =
           getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim()
           || "'Cascadia Code', 'Cascadia Mono', 'JetBrains Mono', 'Consolas', monospace"
+        const rootStyles = getComputedStyle(document.documentElement)
+        const cssVar = (name: string, fallback: string) => rootStyles.getPropertyValue(name).trim() || fallback
 
         const term = new ghostty.Terminal({
           fontSize: useAppStore.getState().settings.terminalFontSize,
           fontFamily: monoFont,
           cursorBlink: true,
           cursorStyle: 'bar',
-          scrollback: 10000,
+          scrollback: 5000,
           theme: {
-            background: '#13141b',
-            foreground: '#c0caf5',
-            cursor: '#c0caf5',
-            selectionBackground: 'rgba(122, 162, 247, 0.2)',
-            black: '#15161e',
-            red: '#f7768e',
-            green: '#9ece6a',
-            yellow: '#e0af68',
-            blue: '#7aa2f7',
-            magenta: '#bb9af7',
-            cyan: '#7dcfff',
-            white: '#a9b1d6',
-            brightBlack: '#414868',
-            brightRed: '#f7768e',
-            brightGreen: '#9ece6a',
-            brightYellow: '#e0af68',
-            brightBlue: '#7aa2f7',
-            brightMagenta: '#bb9af7',
-            brightCyan: '#7dcfff',
-            brightWhite: '#c0caf5',
+            background: cssVar('--term-bg', '#0b0f13'),
+            foreground: cssVar('--term-fg', '#d6deea'),
+            cursor: cssVar('--term-cursor', '#d6deea'),
+            selectionBackground: cssVar('--term-selection', 'rgba(79, 155, 243, 0.25)'),
+            black: cssVar('--term-black', '#121820'),
+            red: cssVar('--term-red', '#f16a72'),
+            green: cssVar('--term-green', '#6ad58e'),
+            yellow: cssVar('--term-yellow', '#f3b067'),
+            blue: cssVar('--term-blue', '#4f9bf3'),
+            magenta: cssVar('--term-magenta', '#b29cff'),
+            cyan: cssVar('--term-cyan', '#57d4c8'),
+            white: cssVar('--term-white', '#c7d1de'),
+            brightBlack: cssVar('--surface-4', '#24303b'),
+            brightRed: cssVar('--term-red', '#f16a72'),
+            brightGreen: cssVar('--term-green', '#6ad58e'),
+            brightYellow: cssVar('--term-yellow', '#f3b067'),
+            brightBlue: cssVar('--term-blue', '#4f9bf3'),
+            brightMagenta: cssVar('--term-magenta', '#b29cff'),
+            brightCyan: cssVar('--term-cyan', '#57d4c8'),
+            brightWhite: cssVar('--term-fg', '#d6deea'),
           },
         })
 

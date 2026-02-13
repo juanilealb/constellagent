@@ -4,7 +4,6 @@ import {
   Menu,
   shell,
   type BrowserWindowConstructorOptions,
-  type MenuItemConstructorOptions,
 } from 'electron'
 import { join } from 'path'
 import { arch, platform, release, tmpdir, version as osVersion } from 'os'
@@ -15,46 +14,6 @@ import { NotificationWatcher } from './notification-watcher'
 let mainWindow: BrowserWindow | null = null
 const notificationWatcher = new NotificationWatcher()
 
-function buildMenuTemplate(): MenuItemConstructorOptions[] {
-  return [
-    {
-      label: 'File',
-      submenu: [{ role: 'close' }, { type: 'separator' }, { role: 'quit' }],
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'delete' },
-        { role: 'selectAll' },
-      ],
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-      ],
-    },
-    {
-      label: 'Window',
-      submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }],
-    },
-  ]
-}
-
 function createWindow(): void {
   const windowOptions: BrowserWindowConstructorOptions = {
     width: 1400,
@@ -64,6 +23,7 @@ function createWindow(): void {
     backgroundColor: '#13141b',
     show: false,
     frame: true,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
@@ -125,8 +85,7 @@ app.whenReady().then(() => {
     },
   })
 
-  const menu = Menu.buildFromTemplate(buildMenuTemplate())
-  Menu.setApplicationMenu(menu)
+  Menu.setApplicationMenu(null)
 
   registerIpcHandlers()
   notificationWatcher.start()

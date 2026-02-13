@@ -1,10 +1,17 @@
 export type AgentKind = 'codex' | 'claude'
 
+export interface AgentChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
 export interface AgentRunPromptRequest {
   agent: AgentKind
-  prompt: string
   cwd: string
+  prompt?: string
+  messages?: AgentChatMessage[]
   imagePaths?: string[]
+  model?: string
 }
 
 export interface AgentRunPromptResult {
