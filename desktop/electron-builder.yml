@@ -10,6 +10,7 @@ files:
   - '!{tsconfig.json,tsconfig.node.json}'
 win:
   icon: build/icon.png
+  signAndEditExecutable: false
   target:
     - nsis
 extraResources:

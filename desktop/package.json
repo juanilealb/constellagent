@@ -10,6 +10,7 @@
     "preview": "electron-vite preview",
     "test": "bunx playwright test --project=electron",
     "rebuild": "bunx electron-rebuild",
+    "dist": "bun run dist:win",
     "dist:win": "electron-vite build && electron-builder --win",
     "postinstall": "bunx electron-rebuild"
   },
@@ -31,7 +32,8 @@
     "zustand": "^5.0.11"
   },
   "patchedDependencies": {
-    "ghostty-web@0.4.0": "patches/ghostty-web@0.4.0.patch"
+    "ghostty-web@0.4.0": "patches/ghostty-web@0.4.0.patch",
+    "node-pty@1.1.0": "patches/node-pty@1.1.0.patch"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
