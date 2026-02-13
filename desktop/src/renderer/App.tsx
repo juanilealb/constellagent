@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Allotment } from 'allotment'
+import { useShallow } from 'zustand/react/shallow'
 import { formatShortcut } from '@shared/platform'
 import { SHORTCUT_MAP } from '@shared/shortcuts'
 import 'allotment/dist/style.css'
@@ -65,14 +66,30 @@ export function App() {
     settingsOpen,
     automationsOpen,
     quickOpenVisible,
-  } = useAppStore()
+  } = useAppStore(
+    useShallow((s) => ({
+      tabs: s.tabs,
+      activeTabId: s.activeTabId,
+      rightPanelOpen: s.rightPanelOpen,
+      sidebarCollapsed: s.sidebarCollapsed,
+      activeWorkspaceTabs: s.activeWorkspaceTabs,
+      workspaces: s.workspaces,
+      activeWorkspaceId: s.activeWorkspaceId,
+      settingsOpen: s.settingsOpen,
+      automationsOpen: s.automationsOpen,
+      quickOpenVisible: s.quickOpenVisible,
+    }))
+  )
 
   const wsTabs = activeWorkspaceTabs()
   const activeTab = wsTabs.find((t) => t.id === activeTabId)
   const workspace = workspaces.find((w) => w.id === activeWorkspaceId)
 
-  // All terminal tabs across every workspace — kept alive to preserve PTY state
-  const allTerminals = allTabs.filter((t): t is Extract<typeof t, { type: 'terminal' }> => t.type === 'terminal')
+  // Keep terminal instances scoped to the active workspace to reduce renderer load.
+  const workspaceTerminals = allTabs.filter(
+    (t): t is Extract<typeof t, { type: 'terminal' }> =>
+      t.type === 'terminal' && t.workspaceId === activeWorkspaceId
+  )
 
   return (
     <div className={styles.app}>
@@ -95,9 +112,7 @@ export function App() {
               <div className={styles.centerPanel}>
                 <TabBar />
                 <div className={styles.contentArea}>
-                  {/* Keep ALL terminal panels alive across workspaces so PTY
-                      state (scrollback, TUI layout) is never lost */}
-                  {allTerminals.map((t) => (
+                  {workspaceTerminals.map((t) => (
                     <TerminalPanel
                       key={t.id}
                       ptyId={t.ptyId}

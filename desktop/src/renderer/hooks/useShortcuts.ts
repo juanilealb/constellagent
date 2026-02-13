@@ -78,6 +78,7 @@ export function useShortcuts() {
       const meta = e.ctrlKey
       const shift = e.shiftKey
       const alt = e.altKey
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
       if (!meta) return
 
       const store = useAppStore.getState()
@@ -89,7 +90,7 @@ export function useShortcuts() {
       }
 
       // ── Quick open: Ctrl+P ──
-      if (!shift && !alt && e.key === 'p') {
+      if (!shift && !alt && (key === 'p' || e.code === 'KeyP')) {
         consume()
         store.toggleQuickOpen()
         return
@@ -115,7 +116,7 @@ export function useShortcuts() {
       }
 
       // ── Tab management ──
-      if (!shift && !alt && e.key === 't') {
+      if (!shift && !alt && (key === 't' || e.code === 'KeyT')) {
         consume()
         store.createTerminalForActiveWorkspace()
         return
@@ -125,7 +126,7 @@ export function useShortcuts() {
         store.createTerminalForActiveWorkspace()
         return
       }
-      if (!shift && !alt && e.key === 'w') {
+      if (!shift && !alt && (key === 'w' || e.code === 'KeyW')) {
         consume()
         store.closeActiveTab()
         return
@@ -148,7 +149,7 @@ export function useShortcuts() {
 
       // ── Panels ──
       // Ctrl+B — toggle sidebar (left)
-      if (!shift && !alt && e.key === 'b') {
+      if (!shift && !alt && (key === 'b' || e.code === 'KeyB')) {
         consume()
         store.toggleSidebar()
         return
@@ -176,7 +177,7 @@ export function useShortcuts() {
 
       // ── Focus ──
       // Ctrl+J — focus terminal (or create one)
-      if (!shift && !alt && e.key === 'j') {
+      if (!shift && !alt && (key === 'j' || e.code === 'KeyJ')) {
         consume()
         store.focusOrCreateTerminal()
         return
@@ -200,7 +201,7 @@ export function useShortcuts() {
 
       // ── Settings ──
       // Ctrl+, — toggle settings
-      if (!shift && !alt && e.key === ',') {
+      if (!shift && !alt && key === ',') {
         consume()
         store.toggleSettings()
         return
@@ -208,7 +209,7 @@ export function useShortcuts() {
 
       // ── Workspace creation ──
       // Ctrl+N — new workspace dialog
-      if (!shift && !alt && e.key === 'n') {
+      if (!shift && !alt && (key === 'n' || e.code === 'KeyN')) {
         consume()
         const project = store.activeProject()
         if (project) {

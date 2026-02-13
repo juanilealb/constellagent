@@ -158,18 +158,24 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createTerminalForActiveWorkspace: async () => {
     const s = get()
-    if (!s.activeWorkspaceId) return
-    const ws = s.workspaces.find((w) => w.id === s.activeWorkspaceId)
+    let workspaceId = s.activeWorkspaceId
+    if (!workspaceId) {
+      workspaceId = s.workspaces[0]?.id ?? null
+      if (!workspaceId) return
+      set({ activeWorkspaceId: workspaceId })
+    }
+
+    const ws = s.workspaces.find((w) => w.id === workspaceId)
     if (!ws) return
 
     const shell = s.settings.defaultShell || undefined
     const ptyId = await window.api.pty.create(ws.worktreePath, shell, { AGENT_ORCH_WS_ID: ws.id })
-    const wsTabs = s.tabs.filter((t) => t.workspaceId === s.activeWorkspaceId)
+    const wsTabs = s.tabs.filter((t) => t.workspaceId === workspaceId)
     const termCount = wsTabs.filter((t) => t.type === 'terminal').length
 
     get().addTab({
       id: crypto.randomUUID(),
-      workspaceId: s.activeWorkspaceId,
+      workspaceId,
       type: 'terminal',
       title: `Terminal ${termCount + 1}`,
       ptyId,

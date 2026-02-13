@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { basenameSafe, formatShortcut, toPosixPath } from '@shared/platform'
 import { SHORTCUT_MAP } from '@shared/shortcuts'
 import { useAppStore } from '../../store/app-store'
@@ -30,7 +31,19 @@ export function TabBar() {
     settings,
     showConfirmDialog,
     dismissConfirmDialog,
-  } = useAppStore()
+  } = useAppStore(
+    useShallow((s) => ({
+      activeTabId: s.activeTabId,
+      setActiveTab: s.setActiveTab,
+      removeTab: s.removeTab,
+      activeWorkspaceTabs: s.activeWorkspaceTabs,
+      createTerminalForActiveWorkspace: s.createTerminalForActiveWorkspace,
+      lastSavedTabId: s.lastSavedTabId,
+      settings: s.settings,
+      showConfirmDialog: s.showConfirmDialog,
+      dismissConfirmDialog: s.dismissConfirmDialog,
+    }))
+  )
   const tabs = activeWorkspaceTabs()
   const confirmOnClose = settings.confirmOnClose
 
