@@ -1,11 +1,13 @@
 import { ipcMain, dialog, app, BrowserWindow, clipboard } from 'electron'
 import { join, relative } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
-import { mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
+import { spawn } from 'child_process'
 import { watch, type FSWatcher } from 'fs'
 import { IPC } from '../shared/ipc-channels'
 import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
+import type { AgentRunPromptRequest, AgentRunPromptResult } from '../shared/agent-types'
 import { debugLog, toPosixPath } from '@shared/platform'
 import { PtyManager } from './pty-manager'
 import { GitService } from './git-service'
@@ -20,6 +22,8 @@ const automationScheduler = new AutomationScheduler(ptyManager)
 
 // Filesystem watchers: dirPath → { watcher, debounceTimer }
 const fsWatchers = new Map<string, { watcher: FSWatcher; timer: ReturnType<typeof setTimeout> | null }>()
+const AGENT_OUTPUT_LIMIT = 2 * 1024 * 1024
+const AGENT_TIMEOUT_MS = 10 * 60 * 1000
 
 function serializeError(error: unknown): unknown {
   if (error instanceof Error) {
@@ -47,6 +51,178 @@ async function runGitOperation<T>(
     })
     throw error
   }
+}
+
+function quoteForLog(value: string): string {
+  return /[\s"]/g.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
+}
+
+function appendCapped(current: string, nextChunk: string): string {
+  const merged = current + nextChunk
+  if (merged.length <= AGENT_OUTPUT_LIMIT) return merged
+  return merged.slice(merged.length - AGENT_OUTPUT_LIMIT)
+}
+
+function resolveGitBashPath(): string | null {
+  const candidates = [
+    process.env.CLAUDE_CODE_GIT_BASH_PATH,
+    process.env.ProgramFiles ? join(process.env.ProgramFiles, 'Git', 'bin', 'bash.exe') : null,
+    process.env['ProgramFiles(x86)'] ? join(process.env['ProgramFiles(x86)'], 'Git', 'bin', 'bash.exe') : null,
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+function resolveClaudeExecutable(): string {
+  const candidates = [
+    process.env.CLAUDE_PATH,
+    process.env.USERPROFILE ? join(process.env.USERPROFILE, '.local', 'bin', 'claude.exe') : null,
+    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'Microsoft', 'WindowsApps', 'Claude.exe') : null,
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  return 'claude'
+}
+
+function resolveCodexCommand(): { command: string; baseArgs: string[] } {
+  const codexScript = process.env.APPDATA
+    ? join(process.env.APPDATA, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js')
+    : null
+
+  if (codexScript && existsSync(codexScript)) {
+    return { command: 'node', baseArgs: [codexScript] }
+  }
+
+  return { command: 'codex', baseArgs: [] }
+}
+
+async function runAgentPrompt(payload: AgentRunPromptRequest): Promise<AgentRunPromptResult> {
+  const prompt = payload.prompt.trim()
+  if (!prompt) {
+    return {
+      agent: payload.agent,
+      ok: false,
+      command: '',
+      exitCode: null,
+      stdout: '',
+      stderr: '',
+      error: 'Prompt cannot be empty.',
+    }
+  }
+
+  const rawImagePaths = (payload.imagePaths ?? []).filter((p) => !!p)
+  const warnings: string[] = []
+  const imagePaths = rawImagePaths.filter((p) => {
+    const exists = existsSync(p)
+    if (!exists) {
+      warnings.push(`Image not found and skipped: ${p}`)
+    }
+    return exists
+  })
+
+  let command = ''
+  let args: string[] = []
+  let executable = ''
+  let env: NodeJS.ProcessEnv = { ...process.env }
+
+  if (payload.agent === 'codex') {
+    const resolved = resolveCodexCommand()
+    executable = resolved.command
+    args = [...resolved.baseArgs, 'exec']
+    for (const imagePath of imagePaths) {
+      args.push('--image', imagePath)
+    }
+    args.push(prompt)
+    command = [executable, ...args].map(quoteForLog).join(' ')
+  } else {
+    executable = resolveClaudeExecutable()
+    const gitBashPath = resolveGitBashPath()
+    if (gitBashPath && !env.CLAUDE_CODE_GIT_BASH_PATH) {
+      env = { ...env, CLAUDE_CODE_GIT_BASH_PATH: gitBashPath }
+    } else if (!gitBashPath) {
+      warnings.push(
+        'Claude Code on Windows needs Git Bash. Install Git for Windows or set CLAUDE_CODE_GIT_BASH_PATH.'
+      )
+    }
+
+    let claudePrompt = prompt
+    if (imagePaths.length > 0) {
+      const imageList = imagePaths.map((p) => `- ${p}`).join('\n')
+      claudePrompt += `\n\nAttached images:\n${imageList}\n\nIf needed, read those files from disk.`
+      warnings.push('Claude does not expose a direct --image flag; image paths were appended to the prompt.')
+    }
+
+    args = ['-p', claudePrompt]
+    command = [executable, ...args].map(quoteForLog).join(' ')
+  }
+
+  return await new Promise<AgentRunPromptResult>((resolve) => {
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    let timedOut = false
+
+    const child = spawn(executable, args, {
+      cwd: payload.cwd,
+      env,
+      windowsHide: true,
+    })
+
+    const timeout = setTimeout(() => {
+      timedOut = true
+      child.kill()
+    }, AGENT_TIMEOUT_MS)
+
+    const finish = (result: AgentRunPromptResult) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      resolve(result)
+    }
+
+    child.stdout.on('data', (chunk: Buffer | string) => {
+      stdout = appendCapped(stdout, chunk.toString())
+    })
+
+    child.stderr.on('data', (chunk: Buffer | string) => {
+      stderr = appendCapped(stderr, chunk.toString())
+    })
+
+    child.on('error', (error) => {
+      finish({
+        agent: payload.agent,
+        ok: false,
+        command,
+        exitCode: null,
+        stdout,
+        stderr,
+        error: error.message,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      })
+    })
+
+    child.on('close', (exitCode) => {
+      const error = timedOut
+        ? `Timed out after ${Math.floor(AGENT_TIMEOUT_MS / 1000)}s.`
+        : (exitCode === 0 ? undefined : (stderr.trim() || `Agent process exited with code ${exitCode}.`))
+
+      finish({
+        agent: payload.agent,
+        ok: !timedOut && exitCode === 0,
+        command,
+        exitCode,
+        stdout,
+        stderr,
+        error,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      })
+    })
+  })
 }
 
 export function registerIpcHandlers(): void {
@@ -555,6 +731,11 @@ export function registerIpcHandlers(): void {
     await saveCodexConfigText(config)
     debugLog('Codex notify hook uninstalled')
     return { success: true }
+  })
+
+  // -- Agent chat --
+  ipcMain.handle(IPC.AGENT_RUN_PROMPT, async (_e, payload: AgentRunPromptRequest) => {
+    return runAgentPrompt(payload)
   })
 
   // ── Automation handlers ──

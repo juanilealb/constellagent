@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc-channels'
 import type { CreateWorktreeProgressEvent } from '../shared/workspace-creation'
+import type { AgentRunPromptRequest, AgentRunPromptResult } from '../shared/agent-types'
 
 const api = {
   git: {
@@ -125,6 +126,11 @@ const api = {
       ipcRenderer.invoke(IPC.CODEX_UNINSTALL_NOTIFY),
     checkNotify: () =>
       ipcRenderer.invoke(IPC.CODEX_CHECK_NOTIFY),
+  },
+
+  agent: {
+    runPrompt: (payload: AgentRunPromptRequest) =>
+      ipcRenderer.invoke(IPC.AGENT_RUN_PROMPT, payload) as Promise<AgentRunPromptResult>,
   },
 
   automations: {

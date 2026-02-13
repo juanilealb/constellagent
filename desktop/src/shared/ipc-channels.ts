@@ -52,6 +52,7 @@ export const IPC = {
   CODEX_INSTALL_NOTIFY: 'codex:install-notify',
   CODEX_UNINSTALL_NOTIFY: 'codex:uninstall-notify',
   CODEX_CHECK_NOTIFY: 'codex:check-notify',
+  AGENT_RUN_PROMPT: 'agent:run-prompt',
 
   // Automation operations
   AUTOMATION_CREATE: 'automation:create',

@@ -3,6 +3,7 @@ import { SHORTCUT_MAP } from '@shared/shortcuts'
 import { useAppStore } from '../../store/app-store'
 import { FileTree } from './FileTree'
 import { ChangedFiles } from './ChangedFiles'
+import { AgentChatPanel } from './AgentChatPanel'
 import { Tooltip } from '../Tooltip/Tooltip'
 import styles from './RightPanel.module.css'
 
@@ -37,6 +38,14 @@ export function RightPanel() {
               Changes
             </button>
           </Tooltip>
+          <Tooltip label="Assistant">
+            <button
+              className={`${styles.modeButton} ${rightPanelMode === 'assistant' ? styles.active : ''}`}
+              onClick={() => setRightPanelMode('assistant')}
+            >
+              Assistant
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -58,6 +67,13 @@ export function RightPanel() {
                 worktreePath={workspace.worktreePath}
                 workspaceId={workspace.id}
                 isActive={rightPanelMode === 'changes'}
+              />
+            </div>
+            <div style={{ display: rightPanelMode === 'assistant' ? 'contents' : 'none' }}>
+              <AgentChatPanel
+                workspaceId={workspace.id}
+                worktreePath={workspace.worktreePath}
+                isActive={rightPanelMode === 'assistant'}
               />
             </div>
           </>
